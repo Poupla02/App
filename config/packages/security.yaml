@@ -1,25 +1,51 @@
 security:
-    # https://symfony.com/doc/current/security/experimental_authenticators.html
-    enable_authenticator_manager: true
-    # https://symfony.com/doc/current/security.html#where-do-users-come-from-user-providers
-    providers:
-        users_in_memory: { memory: null }
-    firewalls:
-        dev:
-            pattern: ^/(_(profiler|wdt)|css|images|js)/
-            security: false
-        main:
-            lazy: true
-            provider: users_in_memory
+  # https://symfony.com/doc/current/security/experimental_authenticators.html
+  enable_authenticator_manager: true
+  password_hashers:
+    App\Entity\Admin:
+      algorithm: auto
 
-            # activate different ways to authenticate
-            # https://symfony.com/doc/current/security.html#firewalls-authentication
+  # https://symfony.com/doc/current/security.html#where-do-users-come-from-user-providers
+  providers:
+    # used to reload user from session & other features (e.g. switch_user)
+    app_customer_provider:
+      entity:
+        class: App\Entity\Customer
+        property: username
+    app_admin_provider:
+      entity:
+        class: App\Entity\Admin
+        property: email
+  firewalls:
+    dev:
+      pattern: ^/(_(profiler|wdt)|css|images|js)/
+      security: false
+    admin:
+      pattern: ^/admin
+      lazy: ~
+      provider: app_admin_provider
+      custom_authenticator: App\Security\AdminCustomAuthenticator
+      logout:
+        path: admin_logout
+        target: admin_login
+    main:
+      pattern: ^/
+      lazy: true
+      provider: app_customer_provider
+      custom_authenticator: App\Security\AppAuthenticator
+      logout:
+        path: app_logout
+        target: /
 
-            # https://symfony.com/doc/current/security/impersonating_user.html
-            # switch_user: true
+  role_hierarchy:
+    ROLE_SPER_ADMIN: [ ROLE_ADMIN ]
+    ROLE_ADMIN: [ ROLE_GESTIONNAIRE ]
+    ROLE_GESTIONNAIRE: [ ROLE_CUSTOMER ]
+    ROLE_CUSTOMER: ROLE_USER
 
-    # Easy way to control access for large sections of your site
-    # Note: Only the *first* access control that matches will be used
-    access_control:
-        # - { path: ^/admin, roles: ROLE_ADMIN }
-        # - { path: ^/profile, roles: ROLE_USER }
+  # Easy way to control access for large sections of your site
+  # Note: Only the *first* access control that matches will be used
+  access_control:
+    - { path: ^/admin/(login|logout), roles: PUBLIC_ACCESS }
+    - { path: ^/admin, roles: ROLE_ADMIN }
+    - { path: ^/profile, roles: ROLE_USER }
